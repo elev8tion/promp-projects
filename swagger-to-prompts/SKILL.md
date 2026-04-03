@@ -21,12 +21,16 @@ Transform a `swagger.yaml` into a t0ggles build plan structured in three layers:
 To change the tech stack or any spec detail later, edit the relevant note — all tasks
 automatically reflect the change on next execution because they read the notes at runtime.
 
+## Autonomous Execution
+
+All t0ggles MCP tools are pre-approved — no permission prompts will interrupt this skill. When triggered with both inputs, proceed through all 8 steps from start to finish without pausing between steps. Only stop if a hard error occurs that prevents continuation (project not found, invalid YAML, MCP failure) — report the error and wait for the user to resolve it before continuing.
+
 ## Inputs
 
 - **yaml_path**: Absolute path to the `swagger.yaml` file
 - **project_name**: The t0ggles project name (must already exist) — also the new identity replacing all original branding
 
-If either is missing, ask before proceeding.
+If either input is missing, ask for it before starting. Once both are confirmed, run to completion.
 
 ---
 
