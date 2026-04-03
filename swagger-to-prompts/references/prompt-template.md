@@ -1,6 +1,6 @@
-# Claude Code Prompt Template
+# Task Description Template
 
-Every task description created by this skill IS the Claude Code prompt. Use this exact structure for every task.
+Every task description is a short Claude Code prompt — max 20 lines. Full specs live in the linked notes. Claude reads them at runtime.
 
 ---
 
@@ -8,40 +8,20 @@ Every task description created by this skill IS the Claude Code prompt. Use this
 
 ```
 ## Context
-You are building **[PROJECT_NAME]** — [info.description with original name replaced by PROJECT_NAME].
+- Project spec: [context_note_url]
+- Phase spec:   [phase_note_url]
 
-This is Step [N] of a systematic rebuild. Complete ONLY the tasks listed below, then stop and confirm completion. Do not implement anything beyond what is specified here.
+## Step [N] — [Task Title]
 
----
+[3–5 sentences: WHAT to build. Name the files. State the outcome.
+Do NOT repeat specs from the notes — just say what this step accomplishes
+and tell Claude to read the phase spec note for full contracts.]
 
-## Task: [Task Title]
-
-## What to Build
-[Precise description of what to create. List every file by path. Describe what each file contains and its role in the project.]
-
-## Specifications
-[Pull exact details from swagger. Be exhaustive. Include:]
-[- Schema: property name, type, format, required/optional, constraints]
-[- Endpoints: HTTP method, full path, path params, query params, request body fields, response fields, HTTP status codes, auth requirement]
-[- Any x- extension fields or description text from the swagger that clarifies intent]
-
-## Identity Mapping
-- Original project name: "[ORIGINAL_NAME]" → Replace with: "[PROJECT_NAME]"
-- Apply to: package names, class/model names, variable names, string literals, comments, README text, API title/description fields, folder names if project-named
-
-## File Structure
-[List every file this task creates or modifies:]
-[  src/models/user.js      — User mongoose schema]
-[  src/models/index.js     — Model exports]
-
-## Acceptance Criteria
-- [ ] [Specific verifiable deliverable — one per file or feature]
-- [ ] All files exist at the correct paths
-- [ ] No references to "[ORIGINAL_NAME]" remain in any created file
-- [ ] [Any framework/library-specific check, e.g. "schema passes validation", "server starts without errors"]
+## Files
+  [path/to/file]    — [one-line role]
+  [path/to/file]    — [one-line role]
 
 ---
-
 Reply "Step [N] complete — [one-line summary of what was built]" and await the next prompt.
 ```
 
@@ -49,96 +29,71 @@ Reply "Step [N] complete — [one-line summary of what was built]" and await the
 
 ## Field Rules
 
-### `[PROJECT_NAME]`
-The new identity provided by the user. Used **everywhere** — in the Context block, in every file reference, in class/function names, in string literals. The original name must never appear.
+### Context links
+Always two links — Project Context note (identity, stack, schemas) and the Phase spec note (file specs, endpoint contracts). Claude reads both before building.
 
-### `[ORIGINAL_NAME]`
-From `info.title` in the swagger. Appears **only** in the Identity Mapping block as the source to replace. Never used anywhere else in the prompt.
+### Step description (3–5 sentences)
+State WHAT gets built, not HOW. Name files. Point to the phase spec for details.
 
-### `[N]` — Step Number
-Sequential integer across all phases and tasks. Step 1 is the first task of Phase 1. Continues unbroken across phases (Step 7 might be the first task of Phase 2, for example).
+Good:
+> Create `src/middleware.ts` — Clerk auth middleware protecting all `/api/*` routes. See the phase spec note for the exact clerkMiddleware configuration, matcher array, and public route list.
 
-### Context block
-One sentence describing what the project does, sourced from `info.description`. Replace any occurrence of the original name. If description is empty, write a one-sentence summary inferred from the swagger's endpoints and tags.
+Bad (too much inline spec — belongs in the note):
+> Set up Clerk middleware using clerkMiddleware from @clerk/nextjs. Configure it with a matcher array of ['/api/(.*)', '/((?!_next|favicon.ico).*)'] and mark /api/health and /api/webhooks/(.*) as public routes...
 
-### What to Build
-Be precise. List file paths. Don't say "create the user model" — say "create `src/models/user.js` which defines a Mongoose schema with the following fields:". The person executing this prompt has no prior context.
+### Files section
+List every file this step creates. The executor uses this as a completion checklist.
 
-### Specifications
-This is where the swagger data goes. Copy field names, types, formats, and constraints exactly. For endpoints, include the full path (e.g. `POST /api/v1/users/{id}/profile`), every parameter, the request body shape, and every response shape. Never summarize — be complete.
-
-### File Structure
-List every file the task creates. This lets the executor verify completeness without reading the whole prompt twice.
-
-### Acceptance Criteria
-Write one checkbox per meaningful deliverable. These should be copy-paste verifiable. Bad: "✓ User model created". Good: "✓ `src/models/user.js` exports a Mongoose model named `User` with fields: id (ObjectId), email (String, required, unique), passwordHash (String, required), createdAt (Date, default: Date.now)".
-
-### Stop Phrase
+### Stop phrase
 Always the last line: `Reply "Step N complete — [summary]" and await the next prompt.`
-
-The summary in the stop phrase should name what was built (e.g. "Step 3 complete — JWT middleware, auth routes /login /register /refresh /logout, and authentication guard created").
+The summary names what was actually built (files, routes, features).
 
 ---
 
-## Example (Phase 1, Task 1)
+## Subtask Format (Acceptance Criteria)
 
+Subtasks are created alongside the task via the `subtasks` array in `create-task`. Each is one verifiable statement. The executor checks these off in t0ggles as they verify.
+
+**3–6 subtasks per task.**
+
+Good (specific and verifiable):
+- `` `src/middleware.ts` exists and exports `clerkMiddleware` ``
+- `` `GET /api/health` returns `{ status: "ok" }` without an auth token ``
+- `` `GET /api/sessions` returns `401` with no Authorization header ``
+- `` `npm run dev` starts without errors on port 3000 ``
+- `` No references to "[original_name]" appear in any created file ``
+
+Bad (too vague to verify):
+- "Middleware is configured"
+- "Auth works correctly"
+- "Tests pass"
+
+---
+
+## Example
+
+**Task description:**
 ```
 ## Context
-You are building **Nexus Commerce** — a RESTful e-commerce API providing product catalog, cart, order management, and user authentication.
+- Project spec: https://t0ggles.com/prompt-projects/notes/00-project-context-abc123
+- Phase spec:   https://t0ggles.com/prompt-projects/notes/phase-1-foundation-def456
 
-This is Step 1 of a systematic rebuild. Complete ONLY the tasks listed below, then stop and confirm completion. Do not implement anything beyond what is specified here.
+## Step 1 — Initialize project and install dependencies
 
----
+Create `package.json` and `.gitignore` at the project root. Install all dependencies
+listed in the Phase 1 spec note. The package name must be `nexus-commerce` — no
+references to the original name anywhere.
 
-## Task: Initialize project structure and install dependencies
-
-## What to Build
-Create the following files and directories:
-- `package.json` — Node.js project manifest with all dependencies
-- `.gitignore` — Standard Node.js gitignore
-- `src/` — Source root directory
-- `src/index.js` — Entry point (imports app, starts server)
-- `src/app.js` — Express app factory (no server.listen here)
-
-## Specifications
-Framework: Express.js
-Runtime: Node.js
-Required dependencies:
-  - express (web framework)
-  - mongoose (MongoDB ODM)
-  - dotenv (environment config)
-  - bcryptjs (password hashing)
-  - jsonwebtoken (JWT auth)
-  - express-validator (input validation)
-  - cors (CORS middleware)
-  - helmet (security headers)
-  - morgan (HTTP logging)
-Dev dependencies:
-  - nodemon
-  - jest
-  - supertest
-
-Base path: /api/v1 (all routes prefixed here)
-Server port: from process.env.PORT, default 3000
-
-## Identity Mapping
-- Original project name: "ShopFlow API" → Replace with: "Nexus Commerce"
-- Apply to: package.json name field, app title in comments, any string that says "ShopFlow"
-
-## File Structure
-  package.json          — project manifest, scripts: start, dev, test
-  .gitignore            — node_modules, .env, dist
-  src/index.js          — loads dotenv, imports app, calls app.listen
-  src/app.js            — creates express instance, mounts /api/v1 router stub, exports app
-
-## Acceptance Criteria
-- [ ] `npm install` runs without errors
-- [ ] `npm run dev` starts the server on port 3000
-- [ ] `GET /health` returns `{ status: "ok", project: "Nexus Commerce" }`
-- [ ] No references to "ShopFlow" appear in any file
-- [ ] package.json `name` field is `"nexus-commerce"`
+## Files
+  package.json    — project manifest with name, version, scripts (start, dev, test), and all deps
+  .gitignore      — excludes node_modules, .env, dist, coverage
 
 ---
-
-Reply "Step 1 complete — project initialized with Express, dependencies installed, base server running" and await the next prompt.
+Reply "Step 1 complete — package.json created, all dependencies installed" and await the next prompt.
 ```
+
+**Subtasks for this task:**
+- `` `npm install` runs without errors ``
+- `` `package.json` `name` field is `"nexus-commerce"` ``
+- `` `.gitignore` excludes `node_modules` and `.env*` ``
+- `` No references to the original project name in any file ``
